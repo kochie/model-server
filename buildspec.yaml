@@ -1,5 +1,10 @@
 version: 0.2
 
+
+env:
+  variables:
+    GO111MODULE: "on"
+
 phases:
   install:
     runtime-versions:
@@ -8,3 +13,8 @@ phases:
     commands:
       - make deps
       - make build
+  post_build:
+    commands:
+      - make package
+      - make deploy
+      - make publish
