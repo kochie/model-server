@@ -2,3 +2,7 @@ packaged.yaml
 .aws-sam/
 
 .idea/
+
+model/get_model/get_model
+model/set_model/set_model
+model/remove_model/remove_model
