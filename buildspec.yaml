@@ -9,6 +9,11 @@ phases:
   install:
     runtime-versions:
       golang: 1.12
+    commands:
+      - sh -c "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install.sh)"
+      - eval \$($(brew --prefix)/bin/brew shellenv)
+      - brew tap aws/tap
+      - brew install aws-sam-cli
   build:
     commands:
       - make deps
