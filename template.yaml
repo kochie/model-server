@@ -1,0 +1,156 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  model_server
+  
+  Sample SAM Template for model_server
+
+Metadata:
+  AWS::ServerlessRepo::Application:
+    Name: model-server
+    Description: A microservice to store different machine learning algorithms
+    Author: Robert Koch
+    SpdxLicenseId: Apache-2.0
+    LicenseUrl: LICENSE.txt
+    ReadmeUrl: README.md
+    Labels: ['machine-learning', 'golang', 'dynamo']
+    HomePageUrl: https://github.com/kochie/model-server
+    SemanticVersion: 0.0.1
+    SourceCodeUrl: https://github.com/kochie/model-server
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 5
+
+Parameters:
+  BucketName:
+    Type: String
+    Default: capstone-models-v1
+
+Resources:
+  GetModelFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: model/get_model/
+      Handler: get_model
+      Runtime: go1.x
+      Tracing: Active # https://docs.aws.amazon.com/lambda/latest/dg/lambda-x-ray.html
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ModelTable
+        - S3ReadPolicy:
+            BucketName: !Sub "${BucketName}"
+      Events:
+        GetResource:
+          Type: Api
+          Properties:
+            Path: /model/{model_name}
+            Method: get
+      Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
+        Variables:
+          TABLE_NAME: !Ref ModelTable
+          BUCKET_NAME: !Ref ModelStorage
+
+  SetModelFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: model/set_model/
+      Handler: set_model
+      Runtime: go1.x
+      Tracing: Active # https://docs.aws.amazon.com/lambda/latest/dg/lambda-x-ray.html
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ModelTable
+        - S3CrudPolicy:
+            BucketName: !Sub "${BucketName}"
+      Events:
+        GetResource:
+          Type: Api
+          Properties:
+            Path: /model
+            Method: post
+      Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
+        Variables:
+          TABLE_NAME: !Ref ModelTable
+          BUCKET_NAME: !Ref ModelStorage
+
+  RemoveModelFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: model/remove_model/
+      Handler: remove_model
+      Runtime: go1.x
+      Tracing: Active # https://docs.aws.amazon.com/lambda/latest/dg/lambda-x-ray.html
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ModelTable
+        - S3CrudPolicy:
+            BucketName: !Sub "${BucketName}"
+      Events:
+        GetResource:
+          Type: Api
+          Properties:
+            Path: /model/{model_name}
+            Method: delete
+      Environment: # More info about Env Vars: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#environment-object
+        Variables:
+          TABLE_NAME: !Ref ModelTable
+          BUCKET_NAME: !Ref ModelStorage
+  
+  ModelTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: models
+      AttributeDefinitions:
+        - AttributeName: "name"
+          AttributeType: "S"
+        - AttributeName: "version"
+          AttributeType: "N"
+      KeySchema:
+        - AttributeName: "name"
+          KeyType: "HASH"
+        - AttributeName: "version"
+          KeyType: "RANGE"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      SSESpecification:
+        SSEEnabled: true
+
+  ModelStorage:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${BucketName}"
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  GetModelAPI:
+    Description: "API Gateway endpoint URL for Prod environment for First Function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/model/"
+  GetModelFunction:
+    Description: "First Lambda Function ARN"
+    Value: !GetAtt GetModelFunction.Arn
+  GetModelFunctionIamRole:
+    Description: "Implicit IAM Role created for Get Model function"
+    Value: !GetAtt GetModelFunctionRole.Arn
+  SetModelAPI:
+    Description: "API Gateway endpoint URL for Prod environment for First Function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/model/"
+  SetModelFunction:
+    Description: "First Lambda Function ARN"
+    Value: !GetAtt SetModelFunction.Arn
+  SetModelFunctionIamRole:
+    Description: "Implicit IAM Role created for Set Model function"
+    Value: !GetAtt SetModelFunctionRole.Arn
+  RemoveModelAPI:
+    Description: "API Gateway endpoint URL for Prod environment for First Function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/model/"
+  RemoveModelFunction:
+    Description: "First Lambda Function ARN"
+    Value: !GetAtt RemoveModelFunction.Arn
+  RemoveModelFunctionIamRole:
+    Description: "Implicit IAM Role created for Remove Model function"
+    Value: !GetAtt RemoveModelFunctionRole.Arn
