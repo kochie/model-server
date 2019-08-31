@@ -1,4 +1,6 @@
-# model_server
+# Nhance Model Server
+
+A microservice that handles different versions of networks and sends them to different containers.
 
 This is a sample template for model_server - Below is a brief explanation of what we have generated for you:
 
